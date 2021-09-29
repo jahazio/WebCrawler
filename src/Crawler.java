@@ -1,76 +1,105 @@
-import org.apache.tika.language.LanguageIdentifier;
+package crawler;
+
+import com.opencsv.CSVWriter;
+import java.io.FileWriter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+
+import com.opencsv.CSVWriter;
+
 
 /*TODO:
+check the page for language before downloading
+save the html to repository folder
 add the URL and number of outlinks to report.csv
 */
 
 public class Crawler {
-    //hashset stores unique values
-    private HashSet<String> links;
-    //count keeps track of the number of URLS crawled
-    private int count =0;
-    //max is the maximum number of crawls we want to do
-    private int max =1;
-    //what language do we want the webpages to be in
-    private String desiredLanguage = "en";
 
-    //each Crawler gets its own hashset
+    private HashSet<String> links;
+    private int count =0;
+
+
     public Crawler() {
         links = new HashSet<String>();
     }
 
-    public void getLinks(String URL) {
-        //check if the url has already been crawled
+    public void getLinks(String URL) throws IOException {
+        String html;
+        //checks if you have already crawled the URLs but doesn't check for duplicate content
         if (!links.contains(URL)) {
             try {
                 //If not add it to the index
                 if (links.add(URL)) {
                     //print the URL
                     System.out.println(URL);
-                }
-                //gets the HTML?
-                Document document = Jsoup.connect(URL).get();
-                //extract links to other URLs from the HTML
-                Elements linksOnPage = document.select("a[href]");
-                //check what language the webpage is
-                LanguageIdentifier identifier = new LanguageIdentifier(document.body().text());
-                String language = identifier.getLanguage();
-                //only save the html and text if webpage is in desired language
-                if(language.equals(desiredLanguage)){
-                    count +=1;
-                    //save the html of the webpage to repository folder
-                    PrintWriter out = new PrintWriter("./repository/" + count + ".html");
-                    out.println(document);
-                    out.close();
-                    //save the plain text of the webpage to the text fodler
-                    PrintWriter out2 = new PrintWriter("./text/" + count + ".txt");
-                    out2.println(document.text());
-                    out2.close();
+                    List<String[]> csvData = createCsvDataSimple();
+//                    try (CSVWriter writer = new CSVWriter(new FileWriter("testing.csv"))) {
+                    html = Jsoup.connect(URL).get().html();
+                    //print the html code
+                    System.out.println(html);
+                    
                     //only crawl up to the number count
-                    if (count>=max){
+                    count +=1;
+                    if (count>=2){
                         System.exit(0);
                     }
                 }
-                //For each extracted URL perform the getLinks method
+                //gets the HTML
+                Document document = Jsoup.connect(URL).get();
+                //extract links to other URLs from the HTML
+                Elements linksOnPage = document.select("a[href]");
+                //For each extracted URL go back to start of try
                 for (Element page : linksOnPage) {
                     getLinks(page.attr("abs:href"));
                 }
-            } catch (Exception e) {
+            } catch (IOException e) {
                 System.err.println("For '" + URL + "': " + e.getMessage());
             }
         }
-    }
-
-    public static void main(String[] args) {
         //enter a URL as the seed to start the crawl
-        new Crawler().getLinks("https://en.wikipedia.org/wiki/California_State_Polytechnic_University,_Pomona");
+        new Crawler().getLinks("https://en.wikipedia.org/");
+        List<String[]> csvData = createCsvDataSimple();
+
+        // default all fields are enclosed in double quotes
+        // default separator is a comma
+        try (CSVWriter writer = new CSVWriter(new FileWriter("testing.csv"))) {
+            writer.writeAll(csvData);
+        }
+
     }
 
+    private static List<String[]> createCsvDataSimple() {
+       String[] header = {"URL", "Number of outlinks"};
+       //for(int i=0; i<=size; i++){
+        String[] record1 = {"1", "first name", "address 1", "11111"};
+        String[] record2 = {"2", "second name", "address 2", "22222"};
+        String[] record3 = {"3", "third name", "address 3", "33333"};
+
+
+        List<String[]> list = new ArrayList<>();
+        list.add(header);
+        list.add(record1);
+        list.add(record2);
+        list.add(record3);
+
+        return list;
+    }
+    
+
+    public static void main(String[] args) throws IOException {
+        //enter a URL as the seed to start the crawl
+        new Crawler().getLinks("https://en.wikipedia.org/");
+    }
+    {
+
+
+   
+}
 }
